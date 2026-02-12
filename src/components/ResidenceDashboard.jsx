@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Header from './Header'
-import Registros from './Registros'
+import LegionelaDashboard from './LegionelaDashboard'
 
 function ResidenceDashboard({ residence, onBack, userName, onLogout }) {
   const [currentSection, setCurrentSection] = useState('home') // 'home' | 'registros'
@@ -8,7 +8,7 @@ function ResidenceDashboard({ residence, onBack, userName, onLogout }) {
   // Secciones del dashboard
   const sections = [
     {
-      id: 'registros',
+      id: 'legionela',
       title: 'Legionela',
       description: 'Control y prevención de Legionela - Registros diarios, semanales y mensuales',
       icon: (
@@ -29,9 +29,9 @@ function ResidenceDashboard({ residence, onBack, userName, onLogout }) {
     setCurrentSection('home')
   }
 
-  // Si estamos en la sección de registros, mostrar ese componente
-  if (currentSection === 'registros') {
-    return <Registros onBack={handleBackToHome} userName={userName} onLogout={onLogout} />
+  // Si estamos en la sección de legionela, mostrar ese componente
+  if (currentSection === 'legionela') {
+    return <LegionelaDashboard onBack={handleBackToHome} userName={userName} onLogout={onLogout} />
   }
 
   // Vista principal del dashboard de la residencia

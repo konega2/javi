@@ -1,9 +1,15 @@
 import { useState } from 'react'
 import SotanoRegistro from './SotanoRegistro'
+import PlantaBajaRegistro from './PlantaBajaRegistro'
+import PrimeraPlantaRegistro from './PrimeraPlantaRegistro'
+import SegundaPlantaRegistro from './SegundaPlantaRegistro'
+import TerceraPlantaRegistro from './TerceraPlantaRegistro'
+import CuartaPlantaRegistro from './CuartaPlantaRegistro'
+import QuintaPlantaRegistro from './QuintaPlantaRegistro'
 import { obtenerEstadisticasPlanta } from '../utils/tareas'
 
 function RegistrosDiario({ onBack, userName, onLogout }) {
-  const [view, setView] = useState('apartados') // 'apartados' o 'sotano'
+  const [view, setView] = useState('apartados') // 'apartados', 'sotano', 'plantabaja', 'primeraplanta', 'segundaplanta', 'terceraplanta', 'cuartaplanta', 'quintaplanta'
   
   const apartados = [
     { 
@@ -20,66 +26,138 @@ function RegistrosDiario({ onBack, userName, onLogout }) {
       title: 'Planta baja', 
       subtitle: 'Nivel 0', 
       color: 'from-blue-500 to-blue-600', 
-      habilitado: false,
-      planta: 'planta_baja',
-      totalPuntos: 0
+      habilitado: true,
+      planta: 'plantabaja',
+      totalPuntos: 13
     },
     { 
       id: 3, 
       title: 'Primera planta', 
       subtitle: 'Nivel 1', 
       color: 'from-green-500 to-green-600', 
-      habilitado: false,
+      habilitado: true,
       planta: 'primera_planta',
-      totalPuntos: 0
+      totalPuntos: 31
     },
     { 
       id: 4, 
       title: 'Segunda planta', 
       subtitle: 'Nivel 2', 
       color: 'from-orange-500 to-orange-600', 
-      habilitado: false,
+      habilitado: true,
       planta: 'segunda_planta',
-      totalPuntos: 0
+      totalPuntos: 31
     },
     { 
       id: 5, 
       title: 'Tercera planta', 
       subtitle: 'Nivel 3', 
       color: 'from-purple-500 to-purple-600', 
-      habilitado: false,
+      habilitado: true,
       planta: 'tercera_planta',
-      totalPuntos: 0
+      totalPuntos: 29
     },
     { 
       id: 6, 
       title: 'Cuarta planta', 
       subtitle: 'Nivel 4', 
       color: 'from-red-500 to-red-600', 
-      habilitado: false,
+      habilitado: true,
       planta: 'cuarta_planta',
-      totalPuntos: 0
+      totalPuntos: 31
     },
     { 
       id: 7, 
       title: 'Quinta planta', 
       subtitle: 'Nivel 5', 
       color: 'from-teal-500 to-teal-600', 
-      habilitado: false,
+      habilitado: true,
       planta: 'quinta_planta',
-      totalPuntos: 0
+      totalPuntos: 1
     }
   ]
 
   const handleApartadoClick = (apartado) => {
     if (apartado.title === 'Sótano' && apartado.habilitado) {
       setView('sotano')
+    } else if (apartado.title === 'Planta baja' && apartado.habilitado) {
+      setView('plantabaja')
+    } else if (apartado.title === 'Primera planta' && apartado.habilitado) {
+      setView('primeraplanta')
+    } else if (apartado.title === 'Segunda planta' && apartado.habilitado) {
+      setView('segundaplanta')
+    } else if (apartado.title === 'Tercera planta' && apartado.habilitado) {
+      setView('terceraplanta')
+    } else if (apartado.title === 'Cuarta planta' && apartado.habilitado) {
+      setView('cuartaplanta')
+    } else if (apartado.title === 'Quinta planta' && apartado.habilitado) {
+      setView('quintaplanta')
     }
   }
 
   if (view === 'sotano') {
     return (
       <SotanoRegistro 
+        onBack={() => setView('apartados')}
+        userName={userName}
+        onLogout={onLogout}
+      />
+    )
+  }
+
+  if (view === 'plantabaja') {
+    return (
+      <PlantaBajaRegistro 
+        onBack={() => setView('apartados')}
+        userName={userName}
+        onLogout={onLogout}
+      />
+    )
+  }
+
+  if (view === 'primeraplanta') {
+    return (
+      <PrimeraPlantaRegistro
+        onBack={() => setView('apartados')}
+        userName={userName}
+        onLogout={onLogout}
+      />
+    )
+  }
+
+  if (view === 'segundaplanta') {
+    return (
+      <SegundaPlantaRegistro
+        onBack={() => setView('apartados')}
+        userName={userName}
+        onLogout={onLogout}
+      />
+    )
+  }
+
+  if (view === 'terceraplanta') {
+    return (
+      <TerceraPlantaRegistro
+        onBack={() => setView('apartados')}
+        userName={userName}
+        onLogout={onLogout}
+      />
+    )
+  }
+
+  if (view === 'cuartaplanta') {
+    return (
+      <CuartaPlantaRegistro
+        onBack={() => setView('apartados')}
+        userName={userName}
+        onLogout={onLogout}
+      />
+    )
+  }
+
+  if (view === 'quintaplanta') {
+    return (
+      <QuintaPlantaRegistro
         onBack={() => setView('apartados')}
         userName={userName}
         onLogout={onLogout}
@@ -183,9 +261,9 @@ function RegistrosDiario({ onBack, userName, onLogout }) {
                     ></div>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {estadisticas.pendientes > 0 
-                      ? `${estadisticas.pendientes} pendientes`
-                      : 'Todas completadas'
+                    {estadisticas.completadas >= 1
+                      ? 'Tarea diaria completada'
+                      : 'Debes hacer 1 tarea hoy'
                     }
                   </p>
                 </div>

@@ -2,30 +2,29 @@ import { useState } from 'react'
 import Header from './Header'
 import RegistrosDiario from './RegistrosDiario'
 import IncidenciasGlobales from './IncidenciasGlobales'
-import { contarTodasTareasPendientesHoy } from '../utils/tareas'
+import { contarTodasTareasPendientesHoy, verificarTodosLosPisosCompletos } from '../utils/tareas'
 
 function Registros({ onBack, userName, onLogout }) {
   const [view, setView] = useState('home')
 
   // Obtener estadísticas de tareas diarias
   const estadisticasTareas = contarTodasTareasPendientesHoy()
+  const todosLosPisosCompletos = verificarTodosLosPisosCompletos()
 
   // Categorías de registro
   const registroCategories = [
     {
       id: 1,
       title: 'Diario',
-      description: estadisticasTareas.pendientes > 0 
-        ? `${estadisticasTareas.pendientes} tareas pendientes hoy de ${estadisticasTareas.total}`
-        : estadisticasTareas.total > 0 
-        ? 'Todas las tareas del día completadas ✅'
-        : 'Registro diario de actividades e incidencias',
+      description: todosLosPisosCompletos
+        ? 'Todos los pisos tienen al menos 1 tarea completada ✅'
+        : `⚠️ FALTAN ${estadisticasTareas.pendientes} TAREAS POR COMPLETAR HOY`,
       icon: (
         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       ),
-      color: estadisticasTareas.pendientes > 0 ? 'from-red-500 to-red-600' : estadisticasTareas.total > 0 ? 'from-green-500 to-green-600' : 'from-blue-500 to-blue-600'
+      color: todosLosPisosCompletos ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'
     },
     {
       id: 2,
@@ -128,34 +127,45 @@ function Registros({ onBack, userName, onLogout }) {
                 <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                <span className="font-medium">Volver a gestión</span>
+                <span className="font-medium">Volver a Legionela</span>
               </button>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-vitalia-purple to-vitalia-purple-light bg-clip-text text-transparent">
-                Control de Legionela
+                Registros de Legionela
               </h1>
-              <p className="text-gray-600 mt-2">Gestión y control de la prevención de Legionela - Registros y observaciones</p>
+              <p className="text-gray-600 mt-2">Gestión de registros diarios, semanales y anuales para el control de Legionela</p>
             </div>
 
             {/* Grid de categorías */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {registroCategories.map((category) => (
+              {registroCategories.map((category) => {
+                const destacarDiarioPendiente = category.id === 1 && !todosLosPisosCompletos
+
+                return (
                 <button
                   key={category.id}
                   onClick={() => handleCategoryClick(category)}
-                  className="group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 p-8 text-left overflow-hidden transform hover:-translate-y-1"
+                  className={`group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 p-8 text-left overflow-hidden transform hover:-translate-y-1 ${
+                    destacarDiarioPendiente ? 'ring-2 ring-red-300 shadow-red-100' : ''
+                  }`}
                 >
                   {/* Fondo degradado */}
-                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${category.color} opacity-10 rounded-bl-full transition-all duration-300 group-hover:w-full group-hover:h-full group-hover:opacity-20`}></div>
+                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${category.color} ${destacarDiarioPendiente ? 'opacity-20' : 'opacity-10'} rounded-bl-full transition-all duration-300 group-hover:w-full group-hover:h-full group-hover:opacity-20`}></div>
 
                   {/* Contenido */}
                   <div className="relative z-10">
                     <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${category.color} text-white mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                       {category.icon}
                     </div>
+                    {destacarDiarioPendiente && (
+                      <div className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                        Pendiente de completar hoy
+                      </div>
+                    )}
                     <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-vitalia-purple transition-colors">
                       {category.title}
                     </h3>
-                    <p className="text-gray-600 text-sm">{category.description}</p>
+                    <p className={`${destacarDiarioPendiente ? 'text-red-700 font-semibold text-base' : 'text-gray-600 text-sm'}`}>{category.description}</p>
 
                     {/* Flecha */}
                     <div className="mt-4 flex items-center text-vitalia-purple opacity-0 group-hover:opacity-100 transition-opacity">
@@ -166,7 +176,7 @@ function Registros({ onBack, userName, onLogout }) {
                     </div>
                   </div>
                 </button>
-              ))}
+              )})}
             </div>
           </>
         ) : view === 'diario' ? (

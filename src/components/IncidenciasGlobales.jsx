@@ -8,6 +8,7 @@ function IncidenciasGlobales({ onBack, userName, onLogout }) {
   const [direccionOrden, setDireccionOrden] = useState('desc')
   const [filtroRiesgo, setFiltroRiesgo] = useState('todos')
   const [incidenciaSeleccionada, setIncidenciaSeleccionada] = useState(null)
+  const [incidenciaEditando, setIncidenciaEditando] = useState(null)
 
   // Cargar todas las incidencias del sistema
   useEffect(() => {
@@ -92,6 +93,36 @@ function IncidenciasGlobales({ onBack, userName, onLogout }) {
       conteo[inc.riesgo] = (conteo[inc.riesgo] || 0) + 1
     })
     return conteo
+  }
+
+  const eliminarIncidencia = (id) => {
+    const confirmar = window.confirm('¿Seguro que quieres eliminar esta incidencia?')
+    if (!confirmar) return
+
+    const nuevasIncidencias = incidencias.filter(inc => inc.id !== id)
+    setIncidencias(nuevasIncidencias)
+    localStorage.setItem('vitalia.incidencias', JSON.stringify(nuevasIncidencias))
+
+    if (incidenciaSeleccionada?.id === id) {
+      setIncidenciaSeleccionada(null)
+    }
+  }
+
+  const editarIncidencia = (incidenciaActualizada) => {
+    const nuevasIncidencias = incidencias.map(inc =>
+      inc.id === incidenciaActualizada.id
+        ? { ...inc, ...incidenciaActualizada, fechaActualizacion: new Date().toISOString() }
+        : inc
+    )
+
+    setIncidencias(nuevasIncidencias)
+    localStorage.setItem('vitalia.incidencias', JSON.stringify(nuevasIncidencias))
+
+    if (incidenciaSeleccionada?.id === incidenciaActualizada.id) {
+      setIncidenciaSeleccionada({ ...incidenciaSeleccionada, ...incidenciaActualizada })
+    }
+
+    setIncidenciaEditando(null)
   }
 
   if (incidenciaSeleccionada) {
@@ -276,15 +307,126 @@ function IncidenciasGlobales({ onBack, userName, onLogout }) {
                   </div>
                 </div>
                 
-                <div className="ml-4">
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                <div className="ml-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIncidenciaEditando(incidencia)
+                    }}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      eliminarIncidencia(incidencia.id)
+                    }}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                  >
+                    Eliminar
+                  </button>
                 </div>
               </div>
             </div>
           ))
         )}
+      </div>
+
+      {incidenciaEditando && (
+        <EditarIncidenciaModal
+          incidencia={incidenciaEditando}
+          onClose={() => setIncidenciaEditando(null)}
+          onSave={editarIncidencia}
+        />
+      )}
+    </div>
+  )
+}
+
+function EditarIncidenciaModal({ incidencia, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    titulo: incidencia.titulo || '',
+    descripcion: incidencia.descripcion || '',
+    riesgo: incidencia.riesgo || 'Medio',
+    zona: incidencia.zona || ''
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave({ ...incidencia, ...formData })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-bold text-gray-800">Editar incidencia</h3>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Título</label>
+            <input
+              type="text"
+              value={formData.titulo}
+              onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vitalia-purple focus:border-transparent"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+            <textarea
+              value={formData.descripcion}
+              onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+              rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vitalia-purple focus:border-transparent"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Riesgo</label>
+              <select
+                value={formData.riesgo}
+                onChange={(e) => setFormData(prev => ({ ...prev, riesgo: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vitalia-purple focus:border-transparent"
+              >
+                <option value="Crítico">Crítico</option>
+                <option value="Alto">Alto</option>
+                <option value="Medio">Medio</option>
+                <option value="Bajo">Bajo</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Zona</label>
+              <input
+                type="text"
+                value={formData.zona}
+                onChange={(e) => setFormData(prev => ({ ...prev, zona: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vitalia-purple focus:border-transparent"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-vitalia-purple to-vitalia-purple-light text-white py-3 rounded-lg font-medium hover:shadow-md transition-all duration-300"
+            >
+              Guardar cambios
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

@@ -5,40 +5,49 @@ import IncidenciasLista from './IncidenciasLista'
 import { verificarYReiniciarDia, reiniciarTareasPlanta } from '../utils/tareas'
 import { descargarPlantaPDF } from '../utils/pdfExport'
 
-// Datos predefinidos del sótano según la tabla
+// Datos predefinidos de la Tercera Planta según la tabla
 const puntosAguaPredefinidos = [
-  { id: 1, lugar: 'SÓTANO', zona: 'LAVANDERÍA', tipoTerminal: 'GRIFO LAVABO', numGrifo: 2 },
-  { id: 2, lugar: 'SÓTANO', zona: 'VESTUARIO FEMENINO', tipoTerminal: 'LAVABO', numGrifo: 3 },
-  { id: 3, lugar: 'SÓTANO', zona: 'VESTUARIO FEMENINO', tipoTerminal: 'GRIFO DUCHA', numGrifo: 3 },
-  { id: 4, lugar: 'SÓTANO', zona: 'VESTUARIO ADAPTADO', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
-  { id: 5, lugar: 'SÓTANO', zona: 'VESTUARIO MASCULINO', tipoTerminal: 'LAVABO', numGrifo: 3 },
-  { id: 6, lugar: 'SÓTANO', zona: 'VESTUARIO MASCULINO', tipoTerminal: 'GRIFO DUCHA', numGrifo: 3 },
-  { id: 7, lugar: 'SÓTANO', zona: 'LAVAPLATOS', tipoTerminal: 'GRIFO FREGADERO', numGrifo: 1 },
-  { id: 8, lugar: 'SÓTANO', zona: 'COCINA', tipoTerminal: 'GRIFO FREGADERO', numGrifo: 1 },
-  { id: 9, lugar: 'SÓTANO', zona: 'COCINA', tipoTerminal: 'LAVAMANOS', numGrifo: 1 },
-  { id: 10, lugar: 'SÓTANO', zona: 'COCINA', tipoTerminal: 'LAVAMANOS CUARTO FRÍO', numGrifo: 1 },
-  { id: 11, lugar: 'SÓTANO', zona: 'COCINA', tipoTerminal: 'FREGADERO CUARTO FRÍO', numGrifo: 1 },
-  { id: 12, lugar: 'SÓTANO', zona: 'COCINA', tipoTerminal: 'FREGADERO PLONGE', numGrifo: 1 },
-  { id: 13, lugar: 'SÓTANO', zona: 'COCINA', tipoTerminal: 'GRIFO MARMITA', numGrifo: 1 },
-  { id: 14, lugar: 'SÓTANO', zona: 'CUARTO BASURAS', tipoTerminal: 'GRIFO AFCH', numGrifo: 1 },
-  { id: 15, lugar: 'SÓTANO', zona: 'PARKING', tipoTerminal: 'GRIFO AFCH 1', numGrifo: 1 },
-  { id: 16, lugar: 'SÓTANO', zona: 'PARKING', tipoTerminal: 'GRIFO AFCH 2', numGrifo: 1 },
-  { id: 17, lugar: 'SÓTANO', zona: 'SALA CALDERAS', tipoTerminal: 'GRIFO AFCH', numGrifo: 1 },
-  { id: 18, lugar: 'SÓTANO', zona: 'SALA DEPÓSITO GRISES', tipoTerminal: 'GRIFO AFCH', numGrifo: 1 },
-  { id: 19, lugar: 'SÓTANO', zona: 'SALA GRUPO PRESIÓN', tipoTerminal: 'GRIFO AFCH', numGrifo: 1 },
-  { id: 20, lugar: 'SÓTANO', zona: 'PATIO INGLÉS', tipoTerminal: 'GRIFO AFCH', numGrifo: 1 }
+  { id: 1, lugar: 'TERCERA PLANTA', zona: '301', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 2, lugar: 'TERCERA PLANTA', zona: '302', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 3, lugar: 'TERCERA PLANTA', zona: '303', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 4, lugar: 'TERCERA PLANTA', zona: '304', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 5, lugar: 'TERCERA PLANTA', zona: '305', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 6, lugar: 'TERCERA PLANTA', zona: '306', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 7, lugar: 'TERCERA PLANTA', zona: '307', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 8, lugar: 'TERCERA PLANTA', zona: '308', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 9, lugar: 'TERCERA PLANTA', zona: '309', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 10, lugar: 'TERCERA PLANTA', zona: '310', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 11, lugar: 'TERCERA PLANTA', zona: '311', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 12, lugar: 'TERCERA PLANTA', zona: '312', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 13, lugar: 'TERCERA PLANTA', zona: '313', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 14, lugar: 'TERCERA PLANTA', zona: '314', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 15, lugar: 'TERCERA PLANTA', zona: '315', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 16, lugar: 'TERCERA PLANTA', zona: '316', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 17, lugar: 'TERCERA PLANTA', zona: '317', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 18, lugar: 'TERCERA PLANTA', zona: '318', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 19, lugar: 'TERCERA PLANTA', zona: '319', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 20, lugar: 'TERCERA PLANTA', zona: '320', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 21, lugar: 'TERCERA PLANTA', zona: '321', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 22, lugar: 'TERCERA PLANTA', zona: '322', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 23, lugar: 'TERCERA PLANTA', zona: '323', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 24, lugar: 'TERCERA PLANTA', zona: '324', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 25, lugar: 'TERCERA PLANTA', zona: '325', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 26, lugar: 'TERCERA PLANTA', zona: '326', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 27, lugar: 'TERCERA PLANTA', zona: 'BAÑO GERIÁTRICO', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 28, lugar: 'TERCERA PLANTA', zona: 'UC 8', tipoTerminal: 'GRIFO LAVABO Y GRIFO DUCHA', numGrifo: 2 },
+  { id: 29, lugar: 'TERCERA PLANTA', zona: 'TERRAZA 3', tipoTerminal: 'GRIFO', numGrifo: 1 }
 ]
 
-function SotanoRegistro({ onBack, userName, onLogout }) {
+function TerceraPlantaRegistro({ onBack, userName, onLogout }) {
   const [view, setView] = useState('registro') // 'registro' o 'incidencias'
-  const [puntosAgua, setPuntosAgua] = useState(puntosAguaPredefinidos)
   const [registros, setRegistros] = useState({})
   const [incidencias, setIncidencias] = useState([])
   const [showIncidenciasModal, setShowIncidenciasModal] = useState(false)
   const [showRegistroModal, setShowRegistroModal] = useState(false)
+  const [puntoActivo, setPuntoActivo] = useState(null)
+  const [puntosAgua, setPuntosAgua] = useState(puntosAguaPredefinidos)
   const [showNuevaTareaModal, setShowNuevaTareaModal] = useState(false)
   const [showReiniciarModal, setShowReiniciarModal] = useState(false)
-  const [puntoActivo, setPuntoActivo] = useState(null)
   
   // Filtros y búsqueda
   const [busqueda, setBusqueda] = useState('')
@@ -47,9 +56,9 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
 
   // Cargar datos del localStorage al montar
   useEffect(() => {
-    const savedRegistros = localStorage.getItem('vitalia.sotano.registros')
+    const savedRegistros = localStorage.getItem('vitalia.terceraplanta.registros')
     const savedIncidencias = localStorage.getItem('vitalia.incidencias')
-    const savedPuntosPersonalizados = localStorage.getItem('vitalia.sotano.puntos')
+    const savedPuntosPersonalizados = localStorage.getItem('vitalia.terceraplanta.puntos')
     
     if (savedRegistros) {
       setRegistros(JSON.parse(savedRegistros))
@@ -79,7 +88,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
       }
     }
     setRegistros(nuevosRegistros)
-    localStorage.setItem('vitalia.sotano.registros', JSON.stringify(nuevosRegistros))
+    localStorage.setItem('vitalia.terceraplanta.registros', JSON.stringify(nuevosRegistros))
     
     // Marcar tarea diaria como completada si se guardó al menos un dato
     const tieneDatos = Boolean(
@@ -97,11 +106,11 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
     if (!tareasDiarias[fecha]) {
       tareasDiarias[fecha] = {}
     }
-    if (!tareasDiarias[fecha]['sotano']) {
-      tareasDiarias[fecha]['sotano'] = {}
+    if (!tareasDiarias[fecha]['tercera_planta']) {
+      tareasDiarias[fecha]['tercera_planta'] = {}
     }
     
-    tareasDiarias[fecha]['sotano'][puntoId] = completada
+    tareasDiarias[fecha]['tercera_planta'][puntoId] = completada
     localStorage.setItem('vitalia.tareas.diarias', JSON.stringify(tareasDiarias))
   }
 
@@ -109,14 +118,14 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
   const seTareaHechaHoy = (puntoId) => {
     const hoy = new Date().toISOString().split('T')[0]
     const tareasDiarias = JSON.parse(localStorage.getItem('vitalia.tareas.diarias') || '{}')
-    return tareasDiarias[hoy]?.sotano?.[puntoId] || false
+    return tareasDiarias[hoy]?.tercera_planta?.[puntoId] || false
   }
 
   // Contar tareas del día
   const contarTareasHoy = () => {
     const hoy = new Date().toISOString().split('T')[0]
     const tareasDiarias = JSON.parse(localStorage.getItem('vitalia.tareas.diarias') || '{}')
-    const tareasHoy = tareasDiarias[hoy]?.sotano || {}
+    const tareasHoy = tareasDiarias[hoy]?.tercera_planta || {}
     
     const completadasReales = Object.values(tareasHoy).filter(Boolean).length
     const completadas = completadasReales > 0 ? 1 : 0
@@ -145,7 +154,8 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
     const nuevoPunto = {
       ...nuevaTarea,
       id: `custom-${Date.now()}`,
-      isCustom: true
+      isCustom: true,
+      lugar: 'TERCERA PLANTA'
     }
     
     // Agregar al estado
@@ -154,7 +164,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
     
     // Guardar solo puntos personalizados en localStorage
     const puntosPersonalizados = nuevosPuntos.filter(p => p.isCustom)
-    localStorage.setItem('vitalia.sotano.puntos', JSON.stringify(puntosPersonalizados))
+    localStorage.setItem('vitalia.terceraplanta.puntos', JSON.stringify(puntosPersonalizados))
     
     setShowNuevaTareaModal(false)
   }
@@ -167,8 +177,8 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
     })
 
     setRegistros(nuevosRegistros)
-    localStorage.setItem('vitalia.sotano.registros', JSON.stringify(nuevosRegistros))
-    reiniciarTareasPlanta('sotano', tareasIds)
+    localStorage.setItem('vitalia.terceraplanta.registros', JSON.stringify(nuevosRegistros))
+    reiniciarTareasPlanta('tercera_planta', tareasIds)
     setShowReiniciarModal(false)
   }
 
@@ -223,7 +233,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
   if (view === 'incidencias') {
     return (
       <IncidenciasLista 
-        incidencias={incidencias.filter(inc => inc.zona.includes('SÓTANO') || inc.zona === 'General' || puntosAgua.some(p => p.zona === inc.zona))}
+        incidencias={incidencias.filter(inc => inc.zona.includes('TERCERA PLANTA') || inc.zona === 'General' || puntosAgua.some(p => p.zona === inc.zona))}
         onBack={() => setView('registro')}
         userName={userName}
         onLogout={onLogout}
@@ -249,7 +259,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
 
         <div className="flex flex-col xl:flex-row xl:items-center gap-4 mb-6">
           <div>
-            <h2 className="text-3xl font-bold text-gray-800">Sótano - Registro de Puntos de Agua</h2>
+            <h2 className="text-3xl font-bold text-gray-800">Tercera Planta - Registro de Puntos de Agua</h2>
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mt-2">
               {/* Estadísticas generales */}
               <div className="flex items-center gap-4">
@@ -501,7 +511,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
         <ReiniciarCardsModal
           onClose={() => setShowReiniciarModal(false)}
           puntosAgua={puntosAgua}
-          planta="sotano"
+          planta="tercera_planta"
           onReset={reiniciarCardsSeleccionadas}
         />
       )}
@@ -711,7 +721,7 @@ const NuevaTareaModal = ({ onClose, onSave, zonasExistentes }) => {
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-vitalia-purple to-vitalia-purple-light text-white p-6 rounded-t-2xl">
-          <h3 className="text-2xl font-bold">➕ Nueva Tarea / Punto de Agua</h3>
+          <h3 className="text-2xl font-bold">➞ Nueva Tarea / Punto de Agua</h3>
           <p className="text-white/80 mt-1">Agrega un nuevo punto de agua manualmente</p>
         </div>
 
@@ -732,7 +742,7 @@ const NuevaTareaModal = ({ onClose, onSave, zonasExistentes }) => {
                 {zonasExistentes.map(z => (
                   <option key={z} value={z}>{z}</option>
                 ))}
-                <option value="nueva">➕ Nueva zona...</option>
+                <option value="nueva">➞ Nueva zona...</option>
               </select>
             </div>
 
@@ -927,4 +937,4 @@ const ReiniciarCardsModal = ({ onClose, puntosAgua, planta, onReset }) => {
   )
 }
 
-export default SotanoRegistro
+export default TerceraPlantaRegistro
