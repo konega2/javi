@@ -30,7 +30,7 @@ function Registros({ onBack, userName, onLogout }) {
     {
       id: 2,
       title: 'Semanal',
-      description: 'Registro semanal consolidado',
+      description: 'Registro semanal consolidado de controles de Legionela',
       icon: (
         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -128,12 +128,12 @@ function Registros({ onBack, userName, onLogout }) {
                 <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                <span className="font-medium">Volver al dashboard</span>
+                <span className="font-medium">Volver a gestión</span>
               </button>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-vitalia-purple to-vitalia-purple-light bg-clip-text text-transparent">
-                Registros
+                Control de Legionela
               </h1>
-              <p className="text-gray-600 mt-2">Gestión de registros, incidencias y observaciones</p>
+              <p className="text-gray-600 mt-2">Gestión y control de la prevención de Legionela - Registros y observaciones</p>
             </div>
 
             {/* Grid de categorías */}
