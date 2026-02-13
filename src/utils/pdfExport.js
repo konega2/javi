@@ -17,20 +17,14 @@ const obtenerFormatoImagen = (dataUrl) => {
   return 'JPEG'
 }
 
-export const descargarPlantaPDF = ({ nombrePlanta, puntosAgua, registros }) => {
-  const doc = new jsPDF('p', 'mm', 'a4')
-  const fechaHoy = new Date().toLocaleDateString('es-ES')
-  const nombre = nombrePlanta || 'PLANTA'
+const formatearMes = (mesClave) => {
+  if (!mesClave || !/^\d{4}-\d{2}$/.test(mesClave)) return textoSeguro(mesClave)
+  const [year, month] = mesClave.split('-').map(Number)
+  return new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+}
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
-  doc.text(`Listado de Tareas - ${nombre}`, 14, 16)
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.text(`Generado el: ${fechaHoy}`, 14, 22)
-
-  let y = 30
+const renderRegistros = ({ doc, puntosAgua, registros, yInicial = 30 }) => {
+  let y = yInicial
 
   puntosAgua.forEach((punto, index) => {
     const registro = registros?.[punto.id] || registros?.[String(punto.id)] || {}
@@ -76,6 +70,22 @@ export const descargarPlantaPDF = ({ nombrePlanta, puntosAgua, registros }) => {
 
     y += bloqueAlto + 4
   })
+}
+
+export const descargarPlantaPDF = ({ nombrePlanta, puntosAgua, registros }) => {
+  const doc = new jsPDF('p', 'mm', 'a4')
+  const fechaHoy = new Date().toLocaleDateString('es-ES')
+  const nombre = nombrePlanta || 'PLANTA'
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(16)
+  doc.text(`Listado de Tareas - ${nombre}`, 14, 16)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text(`Generado el: ${fechaHoy}`, 14, 22)
+
+  renderRegistros({ doc, puntosAgua, registros, yInicial: 30 })
 
   const nombreArchivo = `registro-${nombre
     .toLowerCase()
@@ -83,5 +93,101 @@ export const descargarPlantaPDF = ({ nombrePlanta, puntosAgua, registros }) => {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
 
+  doc.save(nombreArchivo)
+}
+
+export const descargarPlantaPDFPorMeses = ({ nombrePlanta, puntosAgua, registrosPorMes = {}, mesesSeleccionados = [] }) => {
+  const mesesValidos = (mesesSeleccionados || []).filter(m => registrosPorMes[m])
+  if (mesesValidos.length === 0) return
+
+  const doc = new jsPDF('p', 'mm', 'a4')
+  const fechaHoy = new Date().toLocaleDateString('es-ES')
+  const nombre = nombrePlanta || 'PLANTA'
+
+  mesesValidos.forEach((mes, indexMes) => {
+    if (indexMes > 0) doc.addPage()
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.text(`Listado de Tareas - ${nombre}`, 14, 16)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.text(`Mes: ${formatearMes(mes)}`, 14, 22)
+    doc.text(`Generado el: ${fechaHoy}`, 14, 27)
+
+    renderRegistros({
+      doc,
+      puntosAgua,
+      registros: registrosPorMes[mes] || {},
+      yInicial: 35
+    })
+  })
+
+  const nombreArchivo = `registro-${nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')}-meses-${new Date().toISOString().split('T')[0]}.pdf`
+
+  doc.save(nombreArchivo)
+}
+
+export const descargarSemanalPDFPorSemanas = ({ registrosPorSemana = {}, semanasSeleccionadas = [] }) => {
+  const semanasValidas = (semanasSeleccionadas || []).filter(semana => registrosPorSemana[semana])
+  if (semanasValidas.length === 0) return
+
+  const doc = new jsPDF('p', 'mm', 'a4')
+  const fechaHoy = new Date().toLocaleDateString('es-ES')
+
+  const formatearRangoSemana = (claveSemana) => {
+    const [year, month, day] = claveSemana.split('-').map(Number)
+    const inicio = new Date(year, month - 1, day)
+    const fin = new Date(inicio)
+    fin.setDate(inicio.getDate() + 6)
+    const formato = (fecha) => fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    return `${formato(inicio)} - ${formato(fin)}`
+  }
+
+  semanasValidas.forEach((semana, index) => {
+    if (index > 0) doc.addPage()
+
+    const registro = registrosPorSemana[semana] || {}
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.text('Registro Semanal - ACS + AFS', 14, 16)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.text(`Semana: ${formatearRangoSemana(semana)}`, 14, 22)
+    doc.text(`Generado el: ${fechaHoy}`, 14, 27)
+
+    let y = 38
+    const filas = [
+      ['Fecha', textoSeguro(registro.fecha)],
+      ['Puntos de control', registro.puntosControlModo === 'especificar' ? textoSeguro(registro.puntosControlDetalle) : 'TODO EL EDIFICIO'],
+      ['Observaciones', textoSeguro(registro.observaciones)],
+      ['Incidencias', textoSeguro(registro.incidencias)],
+      ['Firmado', textoSeguro(registro.firmado)]
+    ]
+
+    filas.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'bold')
+      doc.text(`${label}:`, 14, y)
+      doc.setFont('helvetica', 'normal')
+
+      const lineas = doc.splitTextToSize(value, 145)
+      doc.text(lineas, 52, y)
+      y += Math.max(8, lineas.length * 5)
+
+      if (y > 275) {
+        doc.addPage()
+        y = 18
+      }
+    })
+  })
+
+  const nombreArchivo = `registro-semanal-${new Date().toISOString().split('T')[0]}.pdf`
   doc.save(nombreArchivo)
 }

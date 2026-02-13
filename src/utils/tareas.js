@@ -5,6 +5,36 @@ export const obtenerFechaHoy = () => {
   return new Date().toISOString().split('T')[0]
 }
 
+const obtenerInicioSemanaISO = (fecha = new Date()) => {
+  const fechaUTC = new Date(Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()))
+  const dia = fechaUTC.getUTCDay() || 7
+  fechaUTC.setUTCDate(fechaUTC.getUTCDate() + 1 - dia)
+  return fechaUTC
+}
+
+export const obtenerClaveSemanaActual = () => {
+  const inicioSemana = obtenerInicioSemanaISO(new Date())
+  const year = inicioSemana.getUTCFullYear()
+  const month = String(inicioSemana.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(inicioSemana.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export const tareaSemanalCompletadaSemanaActual = () => {
+  const registrosSemanales = JSON.parse(localStorage.getItem('vitalia.semanal.registros') || '{}')
+  const claveSemanaActual = obtenerClaveSemanaActual()
+  const registro = registrosSemanales[claveSemanaActual]
+
+  if (!registro) return false
+
+  const tienePuntosControl = Boolean(
+    registro.puntosControlModo === 'todo_edificio' ||
+    (registro.puntosControlModo === 'especificar' && registro.puntosControlDetalle)
+  )
+
+  return Boolean(registro.fecha && tienePuntosControl && registro.firmado)
+}
+
 const clavesRegistrosPorPlanta = {
   'sotano': 'vitalia.sotano.registros',
   'plantabaja': 'vitalia.plantabaja.registros',
@@ -218,4 +248,47 @@ export const verificarYReiniciarDia = () => {
   }
   
   return hoy
+}
+
+const obtenerMesActual = () => {
+  const fecha = new Date()
+  const year = fecha.getFullYear()
+  const month = String(fecha.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+export const rotarRegistrosPorMes = (plantaStorageKey) => {
+  if (!plantaStorageKey) return { mesActual: obtenerMesActual(), rotado: false }
+
+  const mesActual = obtenerMesActual()
+  const claveMesActual = `vitalia.${plantaStorageKey}.registros.mes.actual`
+  const claveRegistrosActuales = `vitalia.${plantaStorageKey}.registros`
+  const claveHistoricoMensual = `vitalia.${plantaStorageKey}.registros.mensuales`
+
+  const mesGuardado = localStorage.getItem(claveMesActual)
+
+  if (!mesGuardado) {
+    localStorage.setItem(claveMesActual, mesActual)
+    return { mesActual, rotado: false }
+  }
+
+  if (mesGuardado === mesActual) {
+    return { mesActual, rotado: false }
+  }
+
+  const registrosMesAnterior = JSON.parse(localStorage.getItem(claveRegistrosActuales) || '{}')
+  const historicoMensual = JSON.parse(localStorage.getItem(claveHistoricoMensual) || '{}')
+
+  if (Object.keys(registrosMesAnterior).length > 0) {
+    historicoMensual[mesGuardado] = {
+      fechaArchivo: new Date().toISOString(),
+      registros: registrosMesAnterior
+    }
+    localStorage.setItem(claveHistoricoMensual, JSON.stringify(historicoMensual))
+  }
+
+  localStorage.setItem(claveRegistrosActuales, JSON.stringify({}))
+  localStorage.setItem(claveMesActual, mesActual)
+
+  return { mesActual, rotado: true }
 }

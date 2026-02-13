@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import Header from './Header'
 import RegistrosDiario from './RegistrosDiario'
+import RegistrosSemanal from './RegistrosSemanal'
 import IncidenciasGlobales from './IncidenciasGlobales'
-import { contarTodasTareasPendientesHoy, verificarTodosLosPisosCompletos } from '../utils/tareas'
+import { contarTodasTareasPendientesHoy, verificarTodosLosPisosCompletos, tareaSemanalCompletadaSemanaActual } from '../utils/tareas'
 
 function Registros({ onBack, userName, onLogout }) {
   const [view, setView] = useState('home')
@@ -10,6 +11,7 @@ function Registros({ onBack, userName, onLogout }) {
   // Obtener estadísticas de tareas diarias
   const estadisticasTareas = contarTodasTareasPendientesHoy()
   const todosLosPisosCompletos = verificarTodosLosPisosCompletos()
+  const semanalCompletado = tareaSemanalCompletadaSemanaActual()
 
   // Categorías de registro
   const registroCategories = [
@@ -29,13 +31,15 @@ function Registros({ onBack, userName, onLogout }) {
     {
       id: 2,
       title: 'Semanal',
-      description: 'Registro semanal consolidado de controles de Legionela',
+      description: semanalCompletado
+        ? 'Tarea semanal completada ✅'
+        : '⚠️ FALTA COMPLETAR LA TAREA SEMANAL',
       icon: (
         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
         </svg>
       ),
-      color: 'from-green-500 to-green-600'
+      color: semanalCompletado ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'
     },
     {
       id: 3,
@@ -97,6 +101,8 @@ function Registros({ onBack, userName, onLogout }) {
   const handleCategoryClick = (category) => {
     if (category.id === 1) {
       setView('diario')
+    } else if (category.id === 2) {
+      setView('semanal')
     } else if (category.id === 7) {
       setView('incidencias')
     } else {
@@ -139,33 +145,35 @@ function Registros({ onBack, userName, onLogout }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {registroCategories.map((category) => {
                 const destacarDiarioPendiente = category.id === 1 && !todosLosPisosCompletos
+                const destacarSemanalPendiente = category.id === 2 && !semanalCompletado
+                const destacarPendiente = destacarDiarioPendiente || destacarSemanalPendiente
 
                 return (
                 <button
                   key={category.id}
                   onClick={() => handleCategoryClick(category)}
                   className={`group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 p-8 text-left overflow-hidden transform hover:-translate-y-1 ${
-                    destacarDiarioPendiente ? 'ring-2 ring-red-300 shadow-red-100' : ''
+                    destacarPendiente ? 'ring-2 ring-red-300 shadow-red-100' : ''
                   }`}
                 >
                   {/* Fondo degradado */}
-                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${category.color} ${destacarDiarioPendiente ? 'opacity-20' : 'opacity-10'} rounded-bl-full transition-all duration-300 group-hover:w-full group-hover:h-full group-hover:opacity-20`}></div>
+                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${category.color} ${destacarPendiente ? 'opacity-20' : 'opacity-10'} rounded-bl-full transition-all duration-300 group-hover:w-full group-hover:h-full group-hover:opacity-20`}></div>
 
                   {/* Contenido */}
                   <div className="relative z-10">
                     <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${category.color} text-white mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                       {category.icon}
                     </div>
-                    {destacarDiarioPendiente && (
+                    {destacarPendiente && (
                       <div className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">
                         <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                        Pendiente de completar hoy
+                        {destacarDiarioPendiente ? 'Pendiente de completar hoy' : 'Pendiente de completar esta semana'}
                       </div>
                     )}
                     <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-vitalia-purple transition-colors">
                       {category.title}
                     </h3>
-                    <p className={`${destacarDiarioPendiente ? 'text-red-700 font-semibold text-base' : 'text-gray-600 text-sm'}`}>{category.description}</p>
+                    <p className={`${destacarPendiente ? 'text-red-700 font-semibold text-base' : 'text-gray-600 text-sm'}`}>{category.description}</p>
 
                     {/* Flecha */}
                     <div className="mt-4 flex items-center text-vitalia-purple opacity-0 group-hover:opacity-100 transition-opacity">
@@ -184,6 +192,11 @@ function Registros({ onBack, userName, onLogout }) {
             onBack={() => setView('home')} 
             userName={userName} 
             onLogout={onLogout} 
+          />
+        ) : view === 'semanal' ? (
+          <RegistrosSemanal
+            onBack={() => setView('home')}
+            userName={userName}
           />
         ) : view === 'incidencias' ? (
           <IncidenciasGlobales 

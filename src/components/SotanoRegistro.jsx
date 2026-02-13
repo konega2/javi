@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import Header from './Header'
 import IncidenciasModal from './IncidenciasModal'
 import IncidenciasLista from './IncidenciasLista'
-import { verificarYReiniciarDia, reiniciarTareasPlanta } from '../utils/tareas'
-import { descargarPlantaPDF } from '../utils/pdfExport'
+import { verificarYReiniciarDia, reiniciarTareasPlanta, rotarRegistrosPorMes } from '../utils/tareas'
+import { descargarPlantaPDFPorMeses } from '../utils/pdfExport'
 
 // Datos predefinidos del sótano según la tabla
 const puntosAguaPredefinidos = [
@@ -30,30 +30,52 @@ const puntosAguaPredefinidos = [
 ]
 
 function SotanoRegistro({ onBack, userName, onLogout }) {
+  const obtenerMesActual = () => new Date().toISOString().slice(0, 7)
+  const formatearMes = (mes) => {
+    const [year, month] = mes.split('-').map(Number)
+    return new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  }
+
   const [view, setView] = useState('registro') // 'registro' o 'incidencias'
   const [puntosAgua, setPuntosAgua] = useState(puntosAguaPredefinidos)
   const [registros, setRegistros] = useState({})
+  const [mesSeleccionado, setMesSeleccionado] = useState(obtenerMesActual())
+  const [mesesDisponibles, setMesesDisponibles] = useState([obtenerMesActual()])
   const [incidencias, setIncidencias] = useState([])
   const [showIncidenciasModal, setShowIncidenciasModal] = useState(false)
   const [showRegistroModal, setShowRegistroModal] = useState(false)
   const [showNuevaTareaModal, setShowNuevaTareaModal] = useState(false)
   const [showReiniciarModal, setShowReiniciarModal] = useState(false)
+  const [showPdfModal, setShowPdfModal] = useState(false)
   const [puntoActivo, setPuntoActivo] = useState(null)
   
   // Filtros y búsqueda
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('todos') // 'todos', 'completado', 'pendiente'
   const [filtroZona, setFiltroZona] = useState('todas')
+  const modoHistorico = mesSeleccionado !== obtenerMesActual()
+
+  const cargarRegistrosPorMes = (mes) => {
+    const mesActual = obtenerMesActual()
+    if (mes === mesActual) {
+      const actuales = JSON.parse(localStorage.getItem('vitalia.sotano.registros') || '{}')
+      setRegistros(actuales)
+      return
+    }
+
+    const historico = JSON.parse(localStorage.getItem('vitalia.sotano.registros.mensuales') || '{}')
+    setRegistros(historico[mes]?.registros || {})
+  }
 
   // Cargar datos del localStorage al montar
   useEffect(() => {
-    const savedRegistros = localStorage.getItem('vitalia.sotano.registros')
+    rotarRegistrosPorMes('sotano')
     const savedIncidencias = localStorage.getItem('vitalia.incidencias')
     const savedPuntosPersonalizados = localStorage.getItem('vitalia.sotano.puntos')
+    const historicoMensual = JSON.parse(localStorage.getItem('vitalia.sotano.registros.mensuales') || '{}')
+    const mesActual = obtenerMesActual()
+    const meses = [mesActual, ...Object.keys(historicoMensual)].sort((a, b) => b.localeCompare(a))
     
-    if (savedRegistros) {
-      setRegistros(JSON.parse(savedRegistros))
-    }
     if (savedIncidencias) {
       setIncidencias(JSON.parse(savedIncidencias))
     }
@@ -61,13 +83,26 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
       const puntosPersonalizados = JSON.parse(savedPuntosPersonalizados)
       setPuntosAgua([...puntosAguaPredefinidos, ...puntosPersonalizados])
     }
+
+    setMesesDisponibles([...new Set(meses)])
+    setMesSeleccionado(mesActual)
+    cargarRegistrosPorMes(mesActual)
     
     // Verificar si cambió el día
     verificarYReiniciarDia()
   }, [])
 
+  useEffect(() => {
+    cargarRegistrosPorMes(mesSeleccionado)
+  }, [mesSeleccionado])
+
   // Guardar registros en localStorage
   const saveRegistro = (puntoId, datos) => {
+    if (modoHistorico) {
+      window.alert('No puedes editar meses archivados. Cambia al mes actual para editar.')
+      return
+    }
+
     const hoy = new Date().toISOString().split('T')[0] // YYYY-MM-DD
     
     const nuevosRegistros = {
@@ -142,6 +177,11 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
 
   // Agregar nuevo punto de agua manualmente
   const agregarNuevaTarea = (nuevaTarea) => {
+    if (modoHistorico) {
+      window.alert('No puedes agregar tareas en un mes archivado.')
+      return
+    }
+
     const nuevoPunto = {
       ...nuevaTarea,
       id: `custom-${Date.now()}`,
@@ -160,6 +200,11 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
   }
 
   const reiniciarCardsSeleccionadas = (tareasIds) => {
+    if (modoHistorico) {
+      window.alert('No puedes reiniciar tareas en un mes archivado.')
+      return
+    }
+
     const nuevosRegistros = { ...registros }
     tareasIds.forEach((id) => {
       delete nuevosRegistros[id]
@@ -170,6 +215,51 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
     localStorage.setItem('vitalia.sotano.registros', JSON.stringify(nuevosRegistros))
     reiniciarTareasPlanta('sotano', tareasIds)
     setShowReiniciarModal(false)
+  }
+
+  const obtenerRegistrosPorMesParaPDF = () => {
+    const mesActual = obtenerMesActual()
+    const historico = JSON.parse(localStorage.getItem('vitalia.sotano.registros.mensuales') || '{}')
+    const actuales = JSON.parse(localStorage.getItem('vitalia.sotano.registros') || '{}')
+
+    const registrosPorMes = Object.fromEntries(
+      Object.entries(historico).map(([mes, contenido]) => [mes, contenido?.registros || {}])
+    )
+
+    registrosPorMes[mesActual] = actuales
+    return registrosPorMes
+  }
+
+  const descargarPDFSegunSeleccion = ({ tipo, meses }) => {
+    const mesActual = obtenerMesActual()
+    let mesesObjetivo = []
+
+    if (tipo === 'mes-seleccionado') {
+      mesesObjetivo = [mesSeleccionado]
+    } else if (tipo === 'meses') {
+      mesesObjetivo = meses
+    } else if (tipo === 'todo') {
+      mesesObjetivo = [...mesesDisponibles]
+    }
+
+    const registrosPorMes = obtenerRegistrosPorMesParaPDF()
+    const mesesValidos = [...new Set(mesesObjetivo)].filter(m => registrosPorMes[m])
+
+    if (mesesValidos.length === 0) {
+      window.alert('No hay datos disponibles para los meses seleccionados.')
+      return
+    }
+
+    if (!mesesValidos.includes(mesActual) && registrosPorMes[mesActual] && Object.keys(registrosPorMes[mesActual]).length === 0) {
+      // no-op, solo evita ruido cuando el mes actual está vacío y no se seleccionó
+    }
+
+    descargarPlantaPDFPorMeses({
+      nombrePlanta: puntosAgua[0]?.lugar || 'PLANTA',
+      puntosAgua,
+      registrosPorMes,
+      mesesSeleccionados: mesesValidos
+    })
   }
 
   // Verificar si un registro está completo
@@ -277,12 +367,31 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
                   </div>
                 </div>
               </div>
+
+              <div className="border-t sm:border-t-0 sm:border-l border-gray-300 pt-3 sm:pt-0 sm:pl-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Mes:</label>
+                  <select
+                    value={mesSeleccionado}
+                    onChange={(e) => setMesSeleccionado(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-vitalia-purple focus:border-transparent"
+                  >
+                    {mesesDisponibles.map(mes => (
+                      <option key={mes} value={mes}>{formatearMes(mes)}</option>
+                    ))}
+                  </select>
+                </div>
+                {modoHistorico && (
+                  <p className="text-xs text-amber-700 mt-1 font-medium">Modo histórico (solo lectura)</p>
+                )}
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-wrap gap-3 w-full xl:w-auto">
             <button
               onClick={() => setShowNuevaTareaModal(true)}
-              className="bg-gradient-to-r from-vitalia-purple to-vitalia-purple-light text-white px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 w-full sm:w-auto"
+              disabled={modoHistorico}
+              className="bg-gradient-to-r from-vitalia-purple to-vitalia-purple-light text-white px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -291,7 +400,8 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
             </button>
             <button
               onClick={() => setShowReiniciarModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 w-full sm:w-auto"
+              disabled={modoHistorico}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -299,11 +409,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
               Reiniciar Cards
             </button>
             <button
-              onClick={() => descargarPlantaPDF({
-                nombrePlanta: puntosAgua[0]?.lugar || 'PLANTA',
-                puntosAgua,
-                registros
-              })}
+              onClick={() => setShowPdfModal(true)}
               className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -398,10 +504,11 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
             <button
               key={punto.id}
               onClick={() => {
+                if (modoHistorico) return
                 setPuntoActivo(punto)
                 setShowRegistroModal(true)
               }}
-              className={`text-left p-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 border-2 relative ${colorClases}`}
+              className={`text-left p-4 rounded-xl shadow-md transition-all duration-300 transform border-2 relative ${colorClases} ${modoHistorico ? 'cursor-default' : 'hover:shadow-lg hover:scale-105'}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-gray-800 text-sm">{punto.zona}</h3>
@@ -503,6 +610,19 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
           puntosAgua={puntosAgua}
           planta="sotano"
           onReset={reiniciarCardsSeleccionadas}
+        />
+      )}
+
+      {showPdfModal && (
+        <PDFMesesModal
+          onClose={() => setShowPdfModal(false)}
+          mesesDisponibles={mesesDisponibles}
+          mesSeleccionado={mesSeleccionado}
+          formatearMes={formatearMes}
+          onDescargar={(payload) => {
+            descargarPDFSegunSeleccion(payload)
+            setShowPdfModal(false)
+          }}
         />
       )}
     </div>
@@ -920,6 +1040,107 @@ const ReiniciarCardsModal = ({ onClose, puntosAgua, planta, onReset }) => {
                 Reiniciar {todasSeleccionadas ? 'Todas' : `${tareasSeleccionadas.length} Seleccionada(s)`}
               </button>
             )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const PDFMesesModal = ({ onClose, mesesDisponibles, mesSeleccionado, formatearMes, onDescargar }) => {
+  const [tipo, setTipo] = useState('mes-seleccionado')
+  const [mesesElegidos, setMesesElegidos] = useState([mesSeleccionado])
+
+  const toggleMes = (mes) => {
+    setMesesElegidos(prev => prev.includes(mes) ? prev.filter(item => item !== mes) : [...prev, mes])
+  }
+
+  const handleDescargar = () => {
+    if (tipo === 'meses' && mesesElegidos.length === 0) {
+      window.alert('Selecciona al menos un mes.')
+      return
+    }
+
+    onDescargar({ tipo, meses: mesesElegidos })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-6 rounded-t-2xl">
+          <h3 className="text-2xl font-bold">Descargar PDF</h3>
+          <p className="text-white/80 mt-1">Elige qué meses quieres incluir</p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="tipoPdf"
+              checked={tipo === 'mes-seleccionado'}
+              onChange={() => setTipo('mes-seleccionado')}
+              className="mt-1"
+            />
+            <div>
+              <p className="font-medium text-gray-800">Solo mes seleccionado</p>
+              <p className="text-sm text-gray-600">{formatearMes(mesSeleccionado)}</p>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="tipoPdf"
+              checked={tipo === 'meses'}
+              onChange={() => setTipo('meses')}
+              className="mt-1"
+            />
+            <div className="w-full">
+              <p className="font-medium text-gray-800">Elegir meses específicos</p>
+              {tipo === 'meses' && (
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+                  {mesesDisponibles.map(mes => (
+                    <label key={mes} className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={mesesElegidos.includes(mes)}
+                        onChange={() => toggleMes(mes)}
+                      />
+                      {formatearMes(mes)}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="tipoPdf"
+              checked={tipo === 'todo'}
+              onChange={() => setTipo('todo')}
+              className="mt-1"
+            />
+            <div>
+              <p className="font-medium text-gray-800">Todo</p>
+              <p className="text-sm text-gray-600">Incluye todos los meses disponibles</p>
+            </div>
+          </label>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDescargar}
+              className="w-full sm:flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-3 rounded-lg font-medium hover:shadow-md transition-all duration-300"
+            >
+              Descargar PDF
+            </button>
           </div>
         </div>
       </div>

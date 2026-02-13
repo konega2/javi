@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react'
 import Header from './Header'
 import IncidenciasModal from './IncidenciasModal'
 import IncidenciasLista from './IncidenciasLista'
-import { verificarYReiniciarDia, reiniciarTareasPlanta } from '../utils/tareas'
-import { descargarPlantaPDF } from '../utils/pdfExport'
+import PDFPeriodosModal from './PDFPeriodosModal'
+import { verificarYReiniciarDia, reiniciarTareasPlanta, rotarRegistrosPorMes } from '../utils/tareas'
+import { descargarPlantaPDFPorMeses } from '../utils/pdfExport'
 
 // Datos predefinidos de la Tercera Planta según la tabla
 const puntosAguaPredefinidos = [
@@ -39,6 +40,12 @@ const puntosAguaPredefinidos = [
 ]
 
 function TerceraPlantaRegistro({ onBack, userName, onLogout }) {
+  const obtenerMesActual = () => new Date().toISOString().slice(0, 7)
+  const formatearMes = (mes) => {
+    const [year, month] = mes.split('-').map(Number)
+    return new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  }
+
   const [view, setView] = useState('registro') // 'registro' o 'incidencias'
   const [registros, setRegistros] = useState({})
   const [incidencias, setIncidencias] = useState([])
@@ -48,6 +55,8 @@ function TerceraPlantaRegistro({ onBack, userName, onLogout }) {
   const [puntosAgua, setPuntosAgua] = useState(puntosAguaPredefinidos)
   const [showNuevaTareaModal, setShowNuevaTareaModal] = useState(false)
   const [showReiniciarModal, setShowReiniciarModal] = useState(false)
+  const [showPdfModal, setShowPdfModal] = useState(false)
+  const [mesesDisponiblesPdf, setMesesDisponiblesPdf] = useState([obtenerMesActual()])
   
   // Filtros y búsqueda
   const [busqueda, setBusqueda] = useState('')
@@ -56,9 +65,13 @@ function TerceraPlantaRegistro({ onBack, userName, onLogout }) {
 
   // Cargar datos del localStorage al montar
   useEffect(() => {
+    rotarRegistrosPorMes('terceraplanta')
     const savedRegistros = localStorage.getItem('vitalia.terceraplanta.registros')
     const savedIncidencias = localStorage.getItem('vitalia.incidencias')
     const savedPuntosPersonalizados = localStorage.getItem('vitalia.terceraplanta.puntos')
+    const historicoMensual = JSON.parse(localStorage.getItem('vitalia.terceraplanta.registros.mensuales') || '{}')
+    const mesActual = obtenerMesActual()
+    const meses = [mesActual, ...Object.keys(historicoMensual)].sort((a, b) => b.localeCompare(a))
     
     if (savedRegistros) {
       setRegistros(JSON.parse(savedRegistros))
@@ -70,6 +83,8 @@ function TerceraPlantaRegistro({ onBack, userName, onLogout }) {
       const puntosPersonalizados = JSON.parse(savedPuntosPersonalizados)
       setPuntosAgua([...puntosAguaPredefinidos, ...puntosPersonalizados])
     }
+
+    setMesesDisponiblesPdf([...new Set(meses)])
     
     // Verificar si cambió el día
     verificarYReiniciarDia()
@@ -180,6 +195,30 @@ function TerceraPlantaRegistro({ onBack, userName, onLogout }) {
     localStorage.setItem('vitalia.terceraplanta.registros', JSON.stringify(nuevosRegistros))
     reiniciarTareasPlanta('tercera_planta', tareasIds)
     setShowReiniciarModal(false)
+  }
+
+  const descargarPDFPorMesesSeleccionados = (mesesSeleccionados) => {
+    const mesActual = obtenerMesActual()
+    const historico = JSON.parse(localStorage.getItem('vitalia.terceraplanta.registros.mensuales') || '{}')
+    const actuales = JSON.parse(localStorage.getItem('vitalia.terceraplanta.registros') || '{}')
+
+    const registrosPorMes = Object.fromEntries(
+      Object.entries(historico).map(([mes, contenido]) => [mes, contenido?.registros || {}])
+    )
+    registrosPorMes[mesActual] = actuales
+
+    const mesesValidos = (mesesSeleccionados || []).filter((mes) => registrosPorMes[mes])
+    if (mesesValidos.length === 0) {
+      window.alert('No hay datos disponibles para los periodos seleccionados.')
+      return
+    }
+
+    descargarPlantaPDFPorMeses({
+      nombrePlanta: puntosAgua[0]?.lugar || 'PLANTA',
+      puntosAgua,
+      registrosPorMes,
+      mesesSeleccionados: mesesValidos
+    })
   }
 
   // Verificar si un registro está completo
@@ -309,11 +348,7 @@ function TerceraPlantaRegistro({ onBack, userName, onLogout }) {
               Reiniciar Cards
             </button>
             <button
-              onClick={() => descargarPlantaPDF({
-                nombrePlanta: puntosAgua[0]?.lugar || 'PLANTA',
-                puntosAgua,
-                registros
-              })}
+              onClick={() => setShowPdfModal(true)}
               className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -513,6 +548,21 @@ function TerceraPlantaRegistro({ onBack, userName, onLogout }) {
           puntosAgua={puntosAgua}
           planta="tercera_planta"
           onReset={reiniciarCardsSeleccionadas}
+        />
+      )}
+
+      {showPdfModal && (
+        <PDFPeriodosModal
+          title="Descargar PDF"
+          subtitle="Elige meses a incluir"
+          periodosDisponibles={mesesDisponiblesPdf}
+          periodoInicial={obtenerMesActual()}
+          formatearPeriodo={formatearMes}
+          onClose={() => setShowPdfModal(false)}
+          onDescargar={(periodos) => {
+            descargarPDFPorMesesSeleccionados(periodos)
+            setShowPdfModal(false)
+          }}
         />
       )}
     </div>
