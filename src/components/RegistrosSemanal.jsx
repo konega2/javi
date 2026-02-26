@@ -1,20 +1,20 @@
 import { useMemo, useState, useEffect } from 'react'
 import PDFPeriodosModal from './PDFPeriodosModal'
-import { obtenerClaveSemanaActual, tareaSemanalCompletadaSemanaActual } from '../utils/tareas'
+import { obtenerClaveSemanaActual } from '../utils/tareas'
 import { descargarSemanalPDFPorSemanas } from '../utils/pdfExport'
 
 function RegistrosSemanal({ onBack, userName }) {
   const [showRegistroModal, setShowRegistroModal] = useState(false)
   const [showReiniciarModal, setShowReiniciarModal] = useState(false)
   const [showPdfModal, setShowPdfModal] = useState(false)
+  const [claveSemanaActual, setClaveSemanaActual] = useState(obtenerClaveSemanaActual())
+  const [semanaSeleccionada, setSemanaSeleccionada] = useState(obtenerClaveSemanaActual())
   const [registroSemana, setRegistroSemana] = useState(null)
   const [completadaSemana, setCompletadaSemana] = useState(false)
   const [semanasDisponibles, setSemanasDisponibles] = useState([])
 
-  const claveSemana = useMemo(() => obtenerClaveSemanaActual(), [])
-
   const rangoSemanaTexto = useMemo(() => {
-    const [year, month, day] = claveSemana.split('-').map(Number)
+    const [year, month, day] = semanaSeleccionada.split('-').map(Number)
     const inicio = new Date(year, month - 1, day)
     const fin = new Date(inicio)
     fin.setDate(inicio.getDate() + 6)
@@ -24,18 +24,37 @@ function RegistrosSemanal({ onBack, userName }) {
       month: '2-digit',
       year: 'numeric'
     })
-
     return `${format(inicio)} - ${format(fin)}`
-  }, [claveSemana])
+  }, [semanaSeleccionada])
+
+  useEffect(() => {
+    const revisarCambioSemana = () => {
+      const nuevaClave = obtenerClaveSemanaActual()
+      setClaveSemanaActual((anterior) => {
+        if (anterior !== nuevaClave) {
+          setSemanaSeleccionada(nuevaClave)
+        }
+        return nuevaClave
+      })
+    }
+
+    const intervalo = setInterval(revisarCambioSemana, 60 * 1000)
+    return () => clearInterval(intervalo)
+  }, [])
 
   useEffect(() => {
     const registrosSemanales = JSON.parse(localStorage.getItem('vitalia.semanal.registros') || '{}')
-    const actual = registrosSemanales[claveSemana] || null
+    const actual = registrosSemanales[semanaSeleccionada] || null
     setRegistroSemana(actual)
-    setCompletadaSemana(tareaSemanalCompletadaSemanaActual())
-    const semanas = [claveSemana, ...Object.keys(registrosSemanales)].sort((a, b) => b.localeCompare(a))
+    setCompletadaSemana(Boolean(
+      actual &&
+      actual.fecha &&
+      (actual.puntosControlModo === 'todo_edificio' || (actual.puntosControlModo === 'especificar' && actual.puntosControlDetalle)) &&
+      actual.firmado
+    ))
+    const semanas = [claveSemanaActual, ...Object.keys(registrosSemanales)].sort((a, b) => b.localeCompare(a))
     setSemanasDisponibles([...new Set(semanas)])
-  }, [claveSemana])
+  }, [semanaSeleccionada, claveSemanaActual])
 
   const formatearSemana = (semana) => {
     const [year, month, day] = semana.split('-').map(Number)
@@ -55,28 +74,34 @@ function RegistrosSemanal({ onBack, userName }) {
       fechaActualizacion: new Date().toISOString()
     }
 
-    registrosSemanales[claveSemana] = registroActualizado
+    registrosSemanales[semanaSeleccionada] = registroActualizado
     localStorage.setItem('vitalia.semanal.registros', JSON.stringify(registrosSemanales))
 
     setRegistroSemana(registroActualizado)
-    setCompletadaSemana(tareaSemanalCompletadaSemanaActual())
+    setCompletadaSemana(Boolean(
+      registroActualizado.fecha &&
+      (registroActualizado.puntosControlModo === 'todo_edificio' || (registroActualizado.puntosControlModo === 'especificar' && registroActualizado.puntosControlDetalle)) &&
+      registroActualizado.firmado
+    ))
     setShowRegistroModal(false)
   }
 
   const reiniciarSemanaActual = () => {
     const registrosSemanales = JSON.parse(localStorage.getItem('vitalia.semanal.registros') || '{}')
-    delete registrosSemanales[claveSemana]
+    delete registrosSemanales[semanaSeleccionada]
     localStorage.setItem('vitalia.semanal.registros', JSON.stringify(registrosSemanales))
 
     setRegistroSemana(null)
     setCompletadaSemana(false)
+    const semanas = [claveSemanaActual, ...Object.keys(registrosSemanales)].sort((a, b) => b.localeCompare(a))
+    setSemanasDisponibles([...new Set(semanas)])
     setShowReiniciarModal(false)
   }
 
   const descargarPdfSemanal = (semanasSeleccionadas) => {
     const registrosSemanales = JSON.parse(localStorage.getItem('vitalia.semanal.registros') || '{}')
     const registrosPorSemana = { ...registrosSemanales }
-    if (registroSemana) registrosPorSemana[claveSemana] = registroSemana
+    if (registroSemana) registrosPorSemana[semanaSeleccionada] = registroSemana
 
     const semanasValidas = (semanasSeleccionadas || []).filter((semana) => registrosPorSemana[semana])
     if (semanasValidas.length === 0) {
@@ -104,7 +129,24 @@ function RegistrosSemanal({ onBack, userName }) {
         </button>
 
         <h2 className="text-3xl font-bold text-gray-800">Semanal</h2>
-        <p className="text-gray-600 mt-2">Selecciona un apartado · Semana actual: {rangoSemanaTexto}</p>
+        <p className="text-gray-600 mt-2">Semana seleccionada: {rangoSemanaTexto}</p>
+        <div className="mt-3 max-w-sm">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Cambiar semana</label>
+          <select
+            value={semanaSeleccionada}
+            onChange={(e) => setSemanaSeleccionada(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vitalia-purple focus:border-transparent"
+          >
+            {semanasDisponibles.map((semana) => (
+              <option key={semana} value={semana}>{formatearSemana(semana)}</option>
+            ))}
+          </select>
+          {semanaSeleccionada === claveSemanaActual ? (
+            <p className="text-xs text-green-700 mt-1 font-medium">Semana actual</p>
+          ) : (
+            <p className="text-xs text-amber-700 mt-1 font-medium">Semana histórica</p>
+          )}
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-3">
@@ -214,7 +256,7 @@ function RegistrosSemanal({ onBack, userName }) {
           title="Descargar PDF Semanal"
           subtitle="Elige semanas a incluir"
           periodosDisponibles={semanasDisponibles}
-          periodoInicial={claveSemana}
+          periodoInicial={semanaSeleccionada}
           formatearPeriodo={formatearSemana}
           onClose={() => setShowPdfModal(false)}
           onDescargar={(periodos) => {

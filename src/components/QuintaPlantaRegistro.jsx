@@ -4,7 +4,7 @@ import IncidenciasModal from './IncidenciasModal'
 import IncidenciasLista from './IncidenciasLista'
 import PDFPeriodosModal from './PDFPeriodosModal'
 import { verificarYReiniciarDia, reiniciarTareasPlanta, rotarRegistrosPorMes } from '../utils/tareas'
-import { descargarPlantaPDFPorMeses } from '../utils/pdfExport'
+import { descargarPlantaPDFPorAnios } from '../utils/pdfExport'
 
 // Datos predefinidos de la Quinta Planta según la tabla
 const puntosAguaPredefinidos = [
@@ -12,10 +12,9 @@ const puntosAguaPredefinidos = [
 ]
 
 function QuintaPlantaRegistro({ onBack, userName, onLogout }) {
-  const obtenerMesActual = () => new Date().toISOString().slice(0, 7)
+  const obtenerMesActual = () => String(new Date().getFullYear())
   const formatearMes = (mes) => {
-    const [year, month] = mes.split('-').map(Number)
-    return new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+    return String(mes)
   }
 
   const [view, setView] = useState('registro') // 'registro' o 'incidencias'
@@ -41,7 +40,7 @@ function QuintaPlantaRegistro({ onBack, userName, onLogout }) {
     const savedRegistros = localStorage.getItem('vitalia.quintaplanta.registros')
     const savedIncidencias = localStorage.getItem('vitalia.incidencias')
     const savedPuntosPersonalizados = localStorage.getItem('vitalia.quintaplanta.puntos')
-    const historicoMensual = JSON.parse(localStorage.getItem('vitalia.quintaplanta.registros.mensuales') || '{}')
+    const historicoMensual = JSON.parse(localStorage.getItem('vitalia.quintaplanta.registros.anuales') || '{}')
     const mesActual = obtenerMesActual()
     const meses = [mesActual, ...Object.keys(historicoMensual)].sort((a, b) => b.localeCompare(a))
     
@@ -171,7 +170,7 @@ function QuintaPlantaRegistro({ onBack, userName, onLogout }) {
 
   const descargarPDFPorMesesSeleccionados = (mesesSeleccionados) => {
     const mesActual = obtenerMesActual()
-    const historico = JSON.parse(localStorage.getItem('vitalia.quintaplanta.registros.mensuales') || '{}')
+    const historico = JSON.parse(localStorage.getItem('vitalia.quintaplanta.registros.anuales') || '{}')
     const actuales = JSON.parse(localStorage.getItem('vitalia.quintaplanta.registros') || '{}')
 
     const registrosPorMes = Object.fromEntries(
@@ -185,11 +184,11 @@ function QuintaPlantaRegistro({ onBack, userName, onLogout }) {
       return
     }
 
-    descargarPlantaPDFPorMeses({
+    descargarPlantaPDFPorAnios({
       nombrePlanta: puntosAgua[0]?.lugar || 'PLANTA',
       puntosAgua,
-      registrosPorMes,
-      mesesSeleccionados: mesesValidos
+      registrosPorAnio: registrosPorMes,
+      aniosSeleccionados: mesesValidos
     })
   }
 
@@ -526,7 +525,7 @@ function QuintaPlantaRegistro({ onBack, userName, onLogout }) {
       {showPdfModal && (
         <PDFPeriodosModal
           title="Descargar PDF"
-          subtitle="Elige meses a incluir"
+          subtitle="Elige años a incluir"
           periodosDisponibles={mesesDisponiblesPdf}
           periodoInicial={obtenerMesActual()}
           formatearPeriodo={formatearMes}

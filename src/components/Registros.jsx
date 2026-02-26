@@ -2,8 +2,12 @@ import { useState } from 'react'
 import Header from './Header'
 import RegistrosDiario from './RegistrosDiario'
 import RegistrosSemanal from './RegistrosSemanal'
+import RegistrosMensual from './RegistrosMensual'
+import RegistrosTrimestral from './RegistrosTrimestral'
+import RegistrosAnual from './RegistrosAnual'
+import RegistrosMuestrasAnual from './RegistrosMuestrasAnual'
 import IncidenciasGlobales from './IncidenciasGlobales'
-import { contarTodasTareasPendientesHoy, verificarTodosLosPisosCompletos, tareaSemanalCompletadaSemanaActual } from '../utils/tareas'
+import { contarTodasTareasPendientesHoy, verificarTodosLosPisosCompletos, tareaSemanalCompletadaSemanaActual, tareaMensualCompletadaMesActual, tareaTrimestralCompletadaTrimestreActual, tareaAnualCompletadaAnioActual } from '../utils/tareas'
 
 function Registros({ onBack, userName, onLogout }) {
   const [view, setView] = useState('home')
@@ -12,6 +16,9 @@ function Registros({ onBack, userName, onLogout }) {
   const estadisticasTareas = contarTodasTareasPendientesHoy()
   const todosLosPisosCompletos = verificarTodosLosPisosCompletos()
   const semanalCompletado = tareaSemanalCompletadaSemanaActual()
+  const mensualCompletado = tareaMensualCompletadaMesActual()
+  const trimestralCompletado = tareaTrimestralCompletadaTrimestreActual()
+  const anualCompletado = tareaAnualCompletadaAnioActual()
 
   // Categorías de registro
   const registroCategories = [
@@ -19,8 +26,8 @@ function Registros({ onBack, userName, onLogout }) {
       id: 1,
       title: 'Diario',
       description: todosLosPisosCompletos
-        ? 'Todos los pisos tienen al menos 1 tarea completada ✅'
-        : `⚠️ FALTAN ${estadisticasTareas.pendientes} TAREAS POR COMPLETAR HOY`,
+        ? 'Actividad diaria completada ✅'
+        : `⚠️ FALTA ${estadisticasTareas.pendientes} ACTIVIDAD POR COMPLETAR HOY`,
       icon: (
         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -44,35 +51,41 @@ function Registros({ onBack, userName, onLogout }) {
     {
       id: 3,
       title: 'Registro Mensual T-Puntos',
-      description: 'Control mensual de puntos de temperatura',
+      description: mensualCompletado
+        ? 'Tarea mensual completada ✅'
+        : '⚠️ FALTA COMPLETAR LA TAREA MENSUAL',
       icon: (
         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
-      color: 'from-orange-500 to-orange-600'
+      color: mensualCompletado ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'
     },
     {
       id: 4,
       title: 'Trimestral ACU+Depósito',
-      description: 'Registro trimestral de ACU y depósitos',
+      description: trimestralCompletado
+        ? 'Tarea trimestral completada ✅'
+        : '⚠️ FALTA COMPLETAR LA TAREA TRIMESTRAL',
       icon: (
         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       ),
-      color: 'from-purple-500 to-purple-600'
+      color: trimestralCompletado ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'
     },
     {
       id: 5,
       title: 'Registro Control Anual',
-      description: 'Control anual de instalaciones y servicios',
+      description: anualCompletado
+        ? 'Tarea anual completada ✅'
+        : '⚠️ FALTA COMPLETAR LA TAREA ANUAL',
       icon: (
         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      color: 'from-red-500 to-red-600'
+      color: anualCompletado ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600'
     },
     {
       id: 6,
@@ -103,6 +116,14 @@ function Registros({ onBack, userName, onLogout }) {
       setView('diario')
     } else if (category.id === 2) {
       setView('semanal')
+    } else if (category.id === 3) {
+      setView('mensual')
+    } else if (category.id === 4) {
+      setView('trimestral')
+    } else if (category.id === 5) {
+      setView('anual')
+    } else if (category.id === 6) {
+      setView('muestrasAnual')
     } else if (category.id === 7) {
       setView('incidencias')
     } else {
@@ -146,7 +167,10 @@ function Registros({ onBack, userName, onLogout }) {
               {registroCategories.map((category) => {
                 const destacarDiarioPendiente = category.id === 1 && !todosLosPisosCompletos
                 const destacarSemanalPendiente = category.id === 2 && !semanalCompletado
-                const destacarPendiente = destacarDiarioPendiente || destacarSemanalPendiente
+                const destacarMensualPendiente = category.id === 3 && !mensualCompletado
+                const destacarTrimestralPendiente = category.id === 4 && !trimestralCompletado
+                const destacarAnualPendiente = category.id === 5 && !anualCompletado
+                const destacarPendiente = destacarDiarioPendiente || destacarSemanalPendiente || destacarMensualPendiente || destacarTrimestralPendiente || destacarAnualPendiente
 
                 return (
                 <button
@@ -167,7 +191,15 @@ function Registros({ onBack, userName, onLogout }) {
                     {destacarPendiente && (
                       <div className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">
                         <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                        {destacarDiarioPendiente ? 'Pendiente de completar hoy' : 'Pendiente de completar esta semana'}
+                        {destacarDiarioPendiente
+                          ? 'Pendiente de completar hoy'
+                          : destacarSemanalPendiente
+                          ? 'Pendiente de completar esta semana'
+                          : destacarMensualPendiente
+                          ? 'Pendiente de completar este mes'
+                          : destacarTrimestralPendiente
+                          ? 'Pendiente de completar este trimestre'
+                          : 'Pendiente de completar este año'}
                       </div>
                     )}
                     <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-vitalia-purple transition-colors">
@@ -195,6 +227,26 @@ function Registros({ onBack, userName, onLogout }) {
           />
         ) : view === 'semanal' ? (
           <RegistrosSemanal
+            onBack={() => setView('home')}
+            userName={userName}
+          />
+        ) : view === 'mensual' ? (
+          <RegistrosMensual
+            onBack={() => setView('home')}
+            userName={userName}
+          />
+        ) : view === 'trimestral' ? (
+          <RegistrosTrimestral
+            onBack={() => setView('home')}
+            userName={userName}
+          />
+        ) : view === 'anual' ? (
+          <RegistrosAnual
+            onBack={() => setView('home')}
+            userName={userName}
+          />
+        ) : view === 'muestrasAnual' ? (
+          <RegistrosMuestrasAnual
             onBack={() => setView('home')}
             userName={userName}
           />

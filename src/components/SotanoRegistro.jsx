@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react'
 import Header from './Header'
 import IncidenciasModal from './IncidenciasModal'
 import IncidenciasLista from './IncidenciasLista'
+import PDFPeriodosModal from './PDFPeriodosModal'
 import { verificarYReiniciarDia, reiniciarTareasPlanta, rotarRegistrosPorMes } from '../utils/tareas'
-import { descargarPlantaPDFPorMeses } from '../utils/pdfExport'
+import { descargarPlantaPDFPorAnios } from '../utils/pdfExport'
 
 // Datos predefinidos del sótano según la tabla
 const puntosAguaPredefinidos = [
@@ -30,10 +31,9 @@ const puntosAguaPredefinidos = [
 ]
 
 function SotanoRegistro({ onBack, userName, onLogout }) {
-  const obtenerMesActual = () => new Date().toISOString().slice(0, 7)
+  const obtenerMesActual = () => String(new Date().getFullYear())
   const formatearMes = (mes) => {
-    const [year, month] = mes.split('-').map(Number)
-    return new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+    return String(mes)
   }
 
   const [view, setView] = useState('registro') // 'registro' o 'incidencias'
@@ -63,7 +63,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
       return
     }
 
-    const historico = JSON.parse(localStorage.getItem('vitalia.sotano.registros.mensuales') || '{}')
+    const historico = JSON.parse(localStorage.getItem('vitalia.sotano.registros.anuales') || '{}')
     setRegistros(historico[mes]?.registros || {})
   }
 
@@ -72,7 +72,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
     rotarRegistrosPorMes('sotano')
     const savedIncidencias = localStorage.getItem('vitalia.incidencias')
     const savedPuntosPersonalizados = localStorage.getItem('vitalia.sotano.puntos')
-    const historicoMensual = JSON.parse(localStorage.getItem('vitalia.sotano.registros.mensuales') || '{}')
+    const historicoMensual = JSON.parse(localStorage.getItem('vitalia.sotano.registros.anuales') || '{}')
     const mesActual = obtenerMesActual()
     const meses = [mesActual, ...Object.keys(historicoMensual)].sort((a, b) => b.localeCompare(a))
     
@@ -219,7 +219,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
 
   const obtenerRegistrosPorMesParaPDF = () => {
     const mesActual = obtenerMesActual()
-    const historico = JSON.parse(localStorage.getItem('vitalia.sotano.registros.mensuales') || '{}')
+    const historico = JSON.parse(localStorage.getItem('vitalia.sotano.registros.anuales') || '{}')
     const actuales = JSON.parse(localStorage.getItem('vitalia.sotano.registros') || '{}')
 
     const registrosPorMes = Object.fromEntries(
@@ -230,18 +230,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
     return registrosPorMes
   }
 
-  const descargarPDFSegunSeleccion = ({ tipo, meses }) => {
-    const mesActual = obtenerMesActual()
-    let mesesObjetivo = []
-
-    if (tipo === 'mes-seleccionado') {
-      mesesObjetivo = [mesSeleccionado]
-    } else if (tipo === 'meses') {
-      mesesObjetivo = meses
-    } else if (tipo === 'todo') {
-      mesesObjetivo = [...mesesDisponibles]
-    }
-
+  const descargarPDFPorAniosSeleccionados = (mesesObjetivo) => {
     const registrosPorMes = obtenerRegistrosPorMesParaPDF()
     const mesesValidos = [...new Set(mesesObjetivo)].filter(m => registrosPorMes[m])
 
@@ -254,11 +243,11 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
       // no-op, solo evita ruido cuando el mes actual está vacío y no se seleccionó
     }
 
-    descargarPlantaPDFPorMeses({
+    descargarPlantaPDFPorAnios({
       nombrePlanta: puntosAgua[0]?.lugar || 'PLANTA',
       puntosAgua,
-      registrosPorMes,
-      mesesSeleccionados: mesesValidos
+      registrosPorAnio: registrosPorMes,
+      aniosSeleccionados: mesesValidos
     })
   }
 
@@ -370,7 +359,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
 
               <div className="border-t sm:border-t-0 sm:border-l border-gray-300 pt-3 sm:pt-0 sm:pl-4">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600">Mes:</label>
+                  <label className="text-sm text-gray-600">Año:</label>
                   <select
                     value={mesSeleccionado}
                     onChange={(e) => setMesSeleccionado(e.target.value)}
@@ -382,7 +371,7 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
                   </select>
                 </div>
                 {modoHistorico && (
-                  <p className="text-xs text-amber-700 mt-1 font-medium">Modo histórico (solo lectura)</p>
+                  <p className="text-xs text-amber-700 mt-1 font-medium">Modo histórico anual (solo lectura)</p>
                 )}
               </div>
             </div>
@@ -614,13 +603,15 @@ function SotanoRegistro({ onBack, userName, onLogout }) {
       )}
 
       {showPdfModal && (
-        <PDFMesesModal
+        <PDFPeriodosModal
+          title="Descargar PDF"
+          subtitle="Elige años a incluir"
           onClose={() => setShowPdfModal(false)}
-          mesesDisponibles={mesesDisponibles}
-          mesSeleccionado={mesSeleccionado}
-          formatearMes={formatearMes}
-          onDescargar={(payload) => {
-            descargarPDFSegunSeleccion(payload)
+          periodosDisponibles={mesesDisponibles}
+          periodoInicial={mesSeleccionado}
+          formatearPeriodo={formatearMes}
+          onDescargar={(periodos) => {
+            descargarPDFPorAniosSeleccionados(periodos)
             setShowPdfModal(false)
           }}
         />
@@ -1040,107 +1031,6 @@ const ReiniciarCardsModal = ({ onClose, puntosAgua, planta, onReset }) => {
                 Reiniciar {todasSeleccionadas ? 'Todas' : `${tareasSeleccionadas.length} Seleccionada(s)`}
               </button>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const PDFMesesModal = ({ onClose, mesesDisponibles, mesSeleccionado, formatearMes, onDescargar }) => {
-  const [tipo, setTipo] = useState('mes-seleccionado')
-  const [mesesElegidos, setMesesElegidos] = useState([mesSeleccionado])
-
-  const toggleMes = (mes) => {
-    setMesesElegidos(prev => prev.includes(mes) ? prev.filter(item => item !== mes) : [...prev, mes])
-  }
-
-  const handleDescargar = () => {
-    if (tipo === 'meses' && mesesElegidos.length === 0) {
-      window.alert('Selecciona al menos un mes.')
-      return
-    }
-
-    onDescargar({ tipo, meses: mesesElegidos })
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-6 rounded-t-2xl">
-          <h3 className="text-2xl font-bold">Descargar PDF</h3>
-          <p className="text-white/80 mt-1">Elige qué meses quieres incluir</p>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="tipoPdf"
-              checked={tipo === 'mes-seleccionado'}
-              onChange={() => setTipo('mes-seleccionado')}
-              className="mt-1"
-            />
-            <div>
-              <p className="font-medium text-gray-800">Solo mes seleccionado</p>
-              <p className="text-sm text-gray-600">{formatearMes(mesSeleccionado)}</p>
-            </div>
-          </label>
-
-          <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="tipoPdf"
-              checked={tipo === 'meses'}
-              onChange={() => setTipo('meses')}
-              className="mt-1"
-            />
-            <div className="w-full">
-              <p className="font-medium text-gray-800">Elegir meses específicos</p>
-              {tipo === 'meses' && (
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto border rounded-lg p-3 bg-gray-50">
-                  {mesesDisponibles.map(mes => (
-                    <label key={mes} className="flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={mesesElegidos.includes(mes)}
-                        onChange={() => toggleMes(mes)}
-                      />
-                      {formatearMes(mes)}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          </label>
-
-          <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="tipoPdf"
-              checked={tipo === 'todo'}
-              onChange={() => setTipo('todo')}
-              className="mt-1"
-            />
-            <div>
-              <p className="font-medium text-gray-800">Todo</p>
-              <p className="text-sm text-gray-600">Incluye todos los meses disponibles</p>
-            </div>
-          </label>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
-            <button
-              onClick={onClose}
-              className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleDescargar}
-              className="w-full sm:flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-3 rounded-lg font-medium hover:shadow-md transition-all duration-300"
-            >
-              Descargar PDF
-            </button>
           </div>
         </div>
       </div>

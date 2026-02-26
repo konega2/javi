@@ -35,6 +35,137 @@ export const tareaSemanalCompletadaSemanaActual = () => {
   return Boolean(registro.fecha && tienePuntosControl && registro.firmado)
 }
 
+export const obtenerClaveMesActual = () => {
+  const fecha = new Date()
+  const year = fecha.getFullYear()
+  const month = String(fecha.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+export const tareaMensualCompletadaMesActual = () => {
+  const registrosMensuales = JSON.parse(localStorage.getItem('vitalia.mensual.registros') || '{}')
+  const claveMesActual = obtenerClaveMesActual()
+  const registro = registrosMensuales[claveMesActual]
+
+  if (!registro) return false
+
+  const elevacion = registro.elevacion || registro
+  const purga = registro.purga
+
+  const elevacionCompleta = Boolean(
+    elevacion?.fecha &&
+    elevacion?.temperaturaAlcanza &&
+    elevacion?.tiempoElevada &&
+    elevacion?.firmado
+  )
+
+  const purgaCompleta = Boolean(
+    purga?.fecha &&
+    (
+      purga?.puntoPurgaModo === 'todo_edificio' ||
+      Boolean(purga?.puntoPurgaDetalle || purga?.puntoPurga)
+    ) &&
+    purga?.firmado
+  )
+
+  return elevacionCompleta && purgaCompleta
+}
+
+export const obtenerClaveTrimestreActual = () => {
+  const fecha = new Date()
+  const year = fecha.getFullYear()
+  const quarter = Math.floor(fecha.getMonth() / 3) + 1
+  return `${year}-T${quarter}`
+}
+
+const revisionTrimestralCompleta = (registro, prefijo) => {
+  const estado = registro?.[`${prefijo}Estado`]
+  const accion = registro?.[`${prefijo}Accion`]
+  const detalle = registro?.[`${prefijo}AccionDetalle`]
+
+  if (!estado || !accion) return false
+  if (accion === 'accion_realizada') return Boolean(detalle && String(detalle).trim())
+  return true
+}
+
+const instalacionTrimestralCompleta = (registro) => {
+  if (!registro) return false
+
+  return Boolean(
+    registro.fecha &&
+    registro.firmado &&
+    revisionTrimestralCompleta(registro, 'funcionamiento') &&
+    revisionTrimestralCompleta(registro, 'incrustaciones') &&
+    revisionTrimestralCompleta(registro, 'corrosion') &&
+    revisionTrimestralCompleta(registro, 'suciedad') &&
+    revisionTrimestralCompleta(registro, 'limpiezaDesinfeccion')
+  )
+}
+
+export const tareaTrimestralCompletadaTrimestreActual = () => {
+  const registrosTrimestrales = JSON.parse(localStorage.getItem('vitalia.trimestral.registros') || '{}')
+  const claveTrimestreActual = obtenerClaveTrimestreActual()
+  const registro = registrosTrimestrales[claveTrimestreActual]
+
+  if (!registro) return false
+
+  return (
+    instalacionTrimestralCompleta(registro.acumulador1) &&
+    instalacionTrimestralCompleta(registro.acumulador2) &&
+    instalacionTrimestralCompleta(registro.depositoAfs)
+  )
+}
+
+export const obtenerClaveAnioActual = () => {
+  return String(new Date().getFullYear())
+}
+
+const requiereDetalleAnual = (claveRevision, estado) => {
+  const reglas = {
+    funcionamiento: 'anomalias',
+    mecanicoGeneral: 'insatisfactorio',
+    higienicoGeneral: 'insatisfactorio',
+    acumuladoresTemperatura: 'no_consigue_temperatura',
+    acumuladoresDepositosLimpieza: 'insatisfactorio',
+    terminalesCorrosionIncrustacion: 'insatisfactorio',
+    terminalesAnulados: 'ausencia'
+  }
+
+  return reglas[claveRevision] === estado
+}
+
+export const tareaAnualCompletadaAnioActual = () => {
+  const registrosAnuales = JSON.parse(localStorage.getItem('vitalia.anual.registros') || '{}')
+  const claveAnio = obtenerClaveAnioActual()
+  const registro = registrosAnuales[claveAnio]
+
+  if (!registro) return false
+
+  const revisiones = registro.revisiones || {}
+  const claves = [
+    'funcionamiento',
+    'mecanicoGeneral',
+    'higienicoGeneral',
+    'acumuladoresTemperatura',
+    'acumuladoresDepositosLimpieza',
+    'terminalesCorrosionIncrustacion',
+    'terminalesAnulados'
+  ]
+
+  const revisionesCompletas = claves.every((clave) => {
+    const revision = revisiones[clave]
+    if (!revision?.estado) return false
+
+    if (requiereDetalleAnual(clave, revision.estado)) {
+      return Boolean(revision.descripcionLocalizacion?.trim() && revision.accionCorrectora?.trim())
+    }
+
+    return true
+  })
+
+  return Boolean(registro.fecha && registro.firmaResponsable && revisionesCompletas)
+}
+
 const clavesRegistrosPorPlanta = {
   'sotano': 'vitalia.sotano.registros',
   'plantabaja': 'vitalia.plantabaja.registros',
@@ -116,9 +247,7 @@ export const contarTodasTareasPendientesHoy = () => {
     'quinta_planta': 1
   }
   
-  let totalPendientes = 0
-  let totalCompletadas = 0
-  let totalPuntos = 0
+  let algunRegistroCompletado = false
   
   Object.entries(configuracionPlantas).forEach(([planta, puntos]) => {
     if (puntos > 0) { // Solo contar plantas implementadas
@@ -126,12 +255,15 @@ export const contarTodasTareasPendientesHoy = () => {
       const completadasReales = Object.values(tareasPlanta).filter(Boolean).length
       const completadaHistorica = estaPlantaCompletadaHistoricamente(planta, puntos)
       const completadas = completadasReales > 0 || completadaHistorica ? 1 : 0
-      
-      totalCompletadas += completadas
-      totalPuntos += 1
-      totalPendientes += (1 - completadas)
+      if (completadas > 0) {
+        algunRegistroCompletado = true
+      }
     }
   })
+
+  const totalCompletadas = algunRegistroCompletado ? 1 : 0
+  const totalPuntos = 1
+  const totalPendientes = totalPuntos - totalCompletadas
   
   return {
     completadas: totalCompletadas,
@@ -192,13 +324,13 @@ export const verificarTodosLosPisosCompletos = () => {
     const completadasReales = Object.values(tareasPlanta).filter(Boolean).length
     const completadaHistorica = estaPlantaCompletadaHistoricamente(piso, configuracionPuntosPorPlanta[piso] || 0)
     const completadas = completadasReales > 0 || completadaHistorica ? 1 : 0
-    
-    if (completadas === 0) {
-      return false // Si algún piso no tiene al menos 1 tarea, retornar false
+
+    if (completadas > 0) {
+      return true
     }
   }
-  
-  return true // Todos los pisos tienen al menos 1 tarea
+
+  return false
 }
 
 const configuracionPuntosPorPlanta = {
@@ -252,9 +384,7 @@ export const verificarYReiniciarDia = () => {
 
 const obtenerMesActual = () => {
   const fecha = new Date()
-  const year = fecha.getFullYear()
-  const month = String(fecha.getMonth() + 1).padStart(2, '0')
-  return `${year}-${month}`
+  return String(fecha.getFullYear())
 }
 
 export const rotarRegistrosPorMes = (plantaStorageKey) => {
@@ -263,7 +393,7 @@ export const rotarRegistrosPorMes = (plantaStorageKey) => {
   const mesActual = obtenerMesActual()
   const claveMesActual = `vitalia.${plantaStorageKey}.registros.mes.actual`
   const claveRegistrosActuales = `vitalia.${plantaStorageKey}.registros`
-  const claveHistoricoMensual = `vitalia.${plantaStorageKey}.registros.mensuales`
+  const claveHistoricoMensual = `vitalia.${plantaStorageKey}.registros.anuales`
 
   const mesGuardado = localStorage.getItem(claveMesActual)
 
